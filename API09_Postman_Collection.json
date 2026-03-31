@@ -1,0 +1,159 @@
+{
+	"info": {
+		"_postman_id": "api09-owasp-demo",
+		"name": "OWASP API9 - Improper Inventory Management Demo",
+		"description": "Colección para demostrar la vulnerabilidad OWASP API9:2023\n\n**Endpoints:**\n- API v1 (Vulnerable): Sin autenticación, expone datos sensibles\n- API v2 (Segura): Con autenticación, datos filtrados",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔴 API v1 - VULNERABLE",
+			"item": [
+				{
+					"name": "1. Obtener usuarios (SIN token)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/v1/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"v1",
+								"users"
+							]
+						},
+						"description": "**VULNERABLE:** Este endpoint NO requiere autenticación y expone datos sensibles (passwords y tokens).\n\n**Resultado esperado:**\n- Status: 200 OK\n- Respuesta incluye: id, nombre, email, password, token\n\n**Problema:** Cualquiera puede acceder sin autenticación."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Mensaje de deprecación",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/v1/users/deprecated",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"deprecated"
+							]
+						},
+						"description": "Endpoint que muestra un mensaje indicando que la API v1 está deprecada.\n\n**Resultado esperado:**\n- Status: 200 OK\n- Mensaje de advertencia"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de la versión 1 (antigua) de la API.\n\n**Problema:** Esta versión debería estar desactivada pero sigue funcionando sin seguridad."
+		},
+		{
+			"name": "🟢 API v2 - SEGURA",
+			"item": [
+				{
+					"name": "1. Obtener usuarios (SIN token - FALLA)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/v2/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"v2",
+								"users"
+							]
+						},
+						"description": "Intento de acceder a la API v2 sin token de autenticación.\n\n**Resultado esperado:**\n- Status: 401 Unauthorized\n- Acceso denegado\n\n**Correcto:** La API v2 rechaza peticiones sin autenticación."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Obtener usuarios (CON token válido)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer 12345",
+								"type": "text",
+								"description": "Token de autenticación válido"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/v2/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"v2",
+								"users"
+							]
+						},
+						"description": "Acceso a la API v2 con token de autenticación válido.\n\n**Resultado esperado:**\n- Status: 200 OK\n- Respuesta incluye SOLO: id, nombre, email\n- NO incluye: password, token\n\n**Correcto:** La API v2 filtra datos sensibles."
+					},
+					"response": []
+				},
+				{
+					"name": "3. Obtener usuarios (CON token inválido)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer token_falso",
+								"type": "text",
+								"description": "Token de autenticación inválido"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/v2/users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"v2",
+								"users"
+							]
+						},
+						"description": "Intento de acceder con un token inválido.\n\n**Resultado esperado:**\n- Status: 401 Unauthorized\n- Acceso denegado\n\n**Correcto:** La API v2 valida el token correctamente."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de la versión 2 (nueva) de la API.\n\n**Características:**\n- Requiere autenticación (token Bearer)\n- Filtra datos sensibles\n- Implementación segura"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "valid_token",
+			"value": "12345",
+			"type": "string"
+		}
+	]
+}

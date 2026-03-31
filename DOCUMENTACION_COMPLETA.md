@@ -218,6 +218,7 @@ public class UserController {
 
 **User.java** (Completo - con datos sensibles)
 ```java
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -299,9 +300,23 @@ Ahora puedes probar los endpoints con Postman o curl.
 ## 🧪 DEMOSTRACIÓN PASO A PASO
 
 ---
-
 ## 🟣 OPCIÓN 1: USAR POSTMAN (Recomendado - Más Fácil)
 
+### 📥 Importar la colección en Postman
+
+**Paso 1:** Abre Postman
+
+**Paso 2:** Click en "Import" (botón arriba a la izquierda)
+
+**Paso 3:** Arrastra el archivo `API09_Postman_Collection.json` o click en "Upload Files"
+
+**Paso 4:** Click en "Import"
+
+**¡Listo!** Ahora verás una colección llamada "OWASP API9 - Improper Inventory Management Demo" con 5 peticiones listas para usar.
+
+---
+
+### 🔴 PRUEBA 1: API v1 - VULNERABLE (sin seguridad)
 ### 🔴 PRUEBA 1: API v1 - VULNERABLE (sin seguridad)
 
 1. Abre Postman
@@ -495,28 +510,53 @@ Invoke-WebRequest -Uri http://localhost:8080/api/v2/users -Headers $headers | Se
 | 5 | `/api/v1/users/deprecated` | ❌ NO | ⚠️ Advertencia | ℹ️ Informativo |
 
 ---
+## 🎯 HISTORIA DE UN ATAQUE (Ejemplo Real)
 
-## 🎯 ESCENARIO DE ATAQUE
+### 👤 Conoce a "Hacker H"
 
-### Paso 1: Descubrimiento
+**Paso 1: Descubrimiento (5 minutos)**
 ```
-Atacante encuentra documentación antigua o hace fuzzing de endpoints:
-→ Descubre /api/v1/users
-```
-
-### Paso 2: Explotación
-```bash
-curl http://localhost:8080/api/v1/users
-→ Obtiene passwords y tokens SIN autenticación
+Hacker H busca en Google: "empresa.com api documentation"
+→ Encuentra un PDF viejo de 2020
+→ El PDF menciona: GET /api/v1/users
+→ "Interesante... veamos si sigue activa"
 ```
 
-### Paso 3: Escalación
+**Paso 2: Prueba (1 minuto)**
 ```
-Usa los tokens robados para:
-- Acceder a otras APIs
-- Suplantar identidades
-- Acceso no autorizado a recursos
-- Robo de información sensible
+Hacker H abre Postman:
+GET http://empresa.com/api/v1/users
+→ ¡Funciona! Sin necesidad de token
+→ Respuesta: Lista de usuarios con passwords y tokens
+```
+
+**Paso 3: Robo de datos (2 minutos)**
+```json
+{
+  "id": 1,
+  "nombre": "Admin Principal",
+  "email": "admin@empresa.com",
+  "password": "admin123",
+  "token": "token_secreto_abc"
+}
+```
+
+**Paso 4: Escalación (10 minutos)**
+```
+Hacker H usa el token robado:
+→ Accede a otras APIs de la empresa
+→ Descarga base de datos de clientes
+→ Modifica información
+→ Crea usuarios falsos con permisos de admin
+```
+
+**Resultado:**
+- 🚨 Empresa hackeada
+- 💰 Pérdida de datos de clientes
+- 📰 Noticia en periódicos
+- ⚖️ Multas por no proteger datos
+
+**Todo porque olvidaron desactivar la API v1**obo de información sensible
 ```
 
 ---
@@ -542,43 +582,100 @@ Eso es exactamente lo que pasa aquí:
 **Para la empresa:**
 - No saben que la API v1 sigue activa
 - Nadie la está vigilando
-- Expone información sensible (passwords, tokens)
+## ✅ ¿CÓMO SOLUCIONAR ESTO?
 
-**Para el atacante:**
-- Puede encontrar la v1 buscando en Google, documentación antigua, o probando URLs
-- Entra sin contraseña
-- Roba passwords y tokens
-- Usa esos datos para hacer más daño
+### 🔒 Solución 1: APAGAR la API v1 (La mejor)
 
-### 🌍 Ejemplo del mundo real:
-
-```
-Atacante busca en Google: "api.empresa.com v1"
-→ Encuentra documentación antigua
-→ Prueba: http://api.empresa.com/api/v1/users
-→ ¡Funciona! Y le da passwords de usuarios
-→ Usa esos passwords para entrar al sistema
-```
-
-### 📝 Esto se llama: "Improper Inventory Management"
-
-**Traducción:** "No saber qué APIs tienes activas"
-
-Es como tener 10 puertas en tu casa pero solo recordar 5. Las otras 5 están abiertas y no lo sabes.
-
----
-
-## ✅ SOLUCIONES IMPLEMENTADAS Y PROPUESTAS
-
-### Solución 1: Desactivar v1 completamente
+**Opción A: Desactivarla completamente**
 ```java
 @GetMapping("/api/v1/users")
 public ResponseEntity<?> getUsersV1() {
     return ResponseEntity
-        .status(HttpStatus.GONE)
-        .body("Esta API ha sido desactivada permanentemente");
+        .status(HttpStatus.GONE)  // Código 410 = "Ya no existe"
+        .body("Esta API fue desactivada. Use /api/v2/users");
 }
 ```
+
+**Resultado:** Cuando alguien intente usar v1, verá: "Esta API fue desactivada"
+
+---
+
+### � Solución 2: Ponerle seguridad a v1
+
+Si no puedes apagarla (porque algunos clientes antiguos la usan):
+
+```java
+// En SecurityConfig.java
+.requestMatchers("/api/v1/**").authenticated()  // Ahora v1 también pide token
+```
+
+**Resultado:** v1 ahora también pide token, como v2
+
+---
+
+### 🧹 Solución 3: Limpiar los datos que expone v1
+
+```java
+@GetMapping("/api/v1/users")
+public ResponseEntity<List<UserDTO>> getUsersV1() {
+    // Retornar UserDTO (sin password/token) en lugar de User
+    return ResponseEntity.ok(userDTOs);
+}
+```
+
+**Resultado:** v1 ya no expone passwords ni tokens
+
+---
+
+### 📊 Solución 4: Vigilar quién usa v1
+
+```java
+@GetMapping("/api/v1/users")
+public ResponseEntity<?> getUsersV1() {
+    logger.warn("⚠️ ALGUIEN USÓ v1 - IP: " + request.getRemoteAddr());
+    // Enviar alerta por email o Slack
+    alertService.send("API v1 fue accedida!");
+    ...
+}
+```
+
+**Resultado:** Recibes una alerta cada vez que alguien usa v1
+
+---
+
+### 📝 Solución 5: Hacer una lista de todas tus APIs
+
+**Crear un documento:**
+```
+INVENTARIO DE APIs - Empresa XYZ
+================================
+
+APIs ACTIVAS:
+✅ /api/v2/users - Activa - Con seguridad
+✅ /api/v2/products - Activa - Con seguridad
+
+APIs DEPRECADAS:
+⚠️ /api/v1/users - DEBE SER DESACTIVADA - Sin seguridad
+⚠️ /api/v1/products - DEBE SER DESACTIVADA - Sin seguridad
+
+APIs DESACTIVADAS:
+❌ /api/beta/test - Desactivada el 01/01/2024
+```
+
+**Revisar este documento cada mes**
+
+---
+
+### 🎯 ¿Cuál solución usar?
+
+| Situación | Solución recomendada |
+|-----------|---------------------|
+| Nadie usa v1 | ✅ Solución 1: Apagarla |
+| Algunos clientes viejos usan v1 | 🔐 Solución 2: Ponerle seguridad |
+| No puedes cambiar v1 ahora | 📊 Solución 4: Vigilarla |
+| Tienes muchas APIs | 📝 Solución 5: Hacer inventario |
+
+**Lo ideal:** Combinar todas las soluciones
 
 ### Solución 2: Aplicar autenticación a v1
 ```java

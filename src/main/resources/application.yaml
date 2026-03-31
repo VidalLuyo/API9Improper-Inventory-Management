@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: API09-OWASP-Demo
+
+server:
+  port: 8080
+
+# Configuración de logging para ver los mensajes de seguridad
+logging:
+  level:
+    pe.edu.vg.API09: INFO
+    org.springframework.security: INFO
